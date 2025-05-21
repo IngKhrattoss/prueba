@@ -1,0 +1,5 @@
+encalma\backendcalma3\Controller\promotionController.class
+encalma\backendcalma3\Entity\promotion.class
+encalma\backendcalma3\Backendcalma3Application.class
+encalma\backendcalma3\Repository\promotionRepository.class
+encalma\backendcalma3\Configuration\WebConfig.class
