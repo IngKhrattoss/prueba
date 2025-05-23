@@ -1,7 +1,6 @@
 package encalma.backendcalma3.Controller;
 
 
-import encalma.backendcalma3.DTO.ApiResponse;
 import encalma.backendcalma3.Entity.promotion;
 import encalma.backendcalma3.Repository.promotionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,29 +23,33 @@ public class promotionController {
     private promotionRepository repository;
 
     @GetMapping
-    public ResponseEntity<?> obtenerPromociones() {
-        List<promotion> promociones = repository.findAll();
-        return ResponseEntity.ok(new ApiResponse<>("success", "Lista de promociones", promociones));
+    public List<promotion> obtenerPromociones() {
+        return repository.findAll();
     }
-
 
     // Opcional: agregar una promoción
     @PostMapping
     public ResponseEntity<?> agregarPromocion(@RequestBody promotion promocion) {
-        if (camposInvalidos(promocion)) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>( "error", "Todos los campos son obligatorios.", null));
+        if (promocion.getTitulo() == null || promocion.getTitulo().trim().isEmpty()
+                || promocion.getDescripcion() == null || promocion.getDescripcion().trim().isEmpty()
+                || promocion.getImagenUrl() == null || promocion.getImagenUrl().trim().isEmpty()
+                || promocion.getPrecio() == null
+                || promocion.getFechaInicio() == null
+                || promocion.getFechaFin() == null) {
+            return ResponseEntity.badRequest().body("Todos los campos son obligatorios.");
         }
 
         if (promocion.getFechaFin().isBefore(promocion.getFechaInicio())) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>( "error", "La fecha de fin no puede ser anterior a la fecha de inicio.", null));
+            return ResponseEntity.badRequest().body("La fecha de fin no puede ser anterior a la fecha de inicio.");
         }
 
         try {
             promotion nueva = repository.save(promocion);
-            return ResponseEntity.ok(new ApiResponse<>( "success", "Promoción guardada exitosamente.", nueva));
+            return ResponseEntity.ok(nueva);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>( "error", "Error al guardar promoción: " + e.getMessage(), null));
+                    .body("Error al guardar promoción: " + e.getMessage());
         }
     }
 
@@ -58,16 +61,20 @@ public class promotionController {
         Optional<promotion> optionalPromocion = repository.findById(id);
 
         if (!optionalPromocion.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ApiResponse<>( "error", "Promoción no encontrada con ID: " + id, null));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Promoción no encontrada con ID: " + id);
         }
 
-        if (camposInvalidos(promocionActualizada)) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>( "error", "Todos los campos son obligatorios.", null));
+        if (promocionActualizada.getTitulo() == null || promocionActualizada.getTitulo().trim().isEmpty()
+                || promocionActualizada.getDescripcion() == null || promocionActualizada.getDescripcion().trim().isEmpty()
+                || promocionActualizada.getImagenUrl() == null || promocionActualizada.getImagenUrl().trim().isEmpty()
+                || promocionActualizada.getPrecio() == null
+                || promocionActualizada.getFechaInicio() == null
+                || promocionActualizada.getFechaFin() == null) {
+            return ResponseEntity.badRequest().body("Todos los campos son obligatorios.");
         }
 
         if (promocionActualizada.getFechaFin().isBefore(promocionActualizada.getFechaInicio())) {
-            return ResponseEntity.badRequest().body(new ApiResponse<>( "error", "La fecha de fin no puede ser anterior a la fecha de inicio.", null));
+            return ResponseEntity.badRequest().body("La fecha de fin no puede ser anterior a la fecha de inicio.");
         }
 
         promotion promocionExistente = optionalPromocion.get();
@@ -78,7 +85,7 @@ public class promotionController {
         promocionExistente.setFechaInicio(promocionActualizada.getFechaInicio());
         promocionExistente.setFechaFin(promocionActualizada.getFechaFin());
 
-        return ResponseEntity.ok(new ApiResponse<>("success", "Promoción actualizada correctamente.", repository.save(promocionExistente)));
+        return ResponseEntity.ok(repository.save(promocionExistente));
     }
 
 
@@ -86,35 +93,24 @@ public class promotionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarPromocion(@PathVariable Long id) {
         if (!repository.existsById(id)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ApiResponse<>( "error", "Promoción no encontrada con ID: " + id, null));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Promoción no encontrada con ID: " + id);
         }
 
         repository.deleteById(id);
-        return ResponseEntity.ok(new ApiResponse<>("success", "Promoción eliminada correctamente.", null));
+        return ResponseEntity.ok("Promoción eliminada correctamente.");
     }
 
 
 
     @GetMapping("/actuales")
-    public ResponseEntity<?> obtenerPromocionesActuales(
+    public List<promotion> obtenerPromocionesActuales(
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate fecha) {
+
+        // Si no pasan fecha => usa la fecha de “hoy”
         LocalDate hoy = (fecha == null) ? LocalDate.now() : fecha;
-        List<promotion> actuales = repository.findByFechaInicioLessThanEqualAndFechaFinGreaterThanEqual(hoy, hoy);
-        return ResponseEntity.ok(new ApiResponse<>("success", "Promociones vigentes", actuales));
-    }
-
-
-
-    private boolean camposInvalidos(promotion p) {
-        return p.getTitulo() == null || p.getTitulo().trim().isEmpty()
-                || p.getDescripcion() == null || p.getDescripcion().trim().isEmpty()
-                || p.getImagenUrl() == null || p.getImagenUrl().trim().isEmpty()
-                || p.getPrecio() == null
-                || p.getFechaInicio() == null
-                || p.getFechaFin() == null;
+        return repository.findByFechaInicioLessThanEqualAndFechaFinGreaterThanEqual(hoy, hoy);
     }
 
 
